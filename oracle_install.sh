@@ -4,7 +4,7 @@
 #local host ip
 #address: https://github.com/spdir/oracle-single-install
 # 国内仓库地址: https://gitee.com/spdir/oracle-single-install
-HostIP=""
+HostIP=`ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}'`
 #oracle user password
 OracleUserPasswd="oracle.com"
 #default `systemOracle.com`
@@ -21,6 +21,12 @@ IS_INSTANCE='1'
 # Choose configure file path
 # 0-remote(default)  1-local
 Get_Config_Method="0"
+# install package online or offline
+# online-online,offline-offline,default online
+Install_Package_Mode="offline"
+# offline package path where you install packages from
+# when the value of "Install_Package_Mode" is offline, the config can't be empty
+Offline_Package_Path="/tmp"
 #---------------------------------------------------------------------------------#
 #Global environment variable
 if [[ ${SID} == "" ]];then
@@ -111,15 +117,56 @@ function j_para() {
       fi
     fi
   fi
+  if [[ ${Install_Package_Mode} == 'offline' && ! -f ${Offline_Package_Path}/oralibs.tar.gz ]]; then
+    echo -e "\033[34mInstallNotice >>\033[0m \033[31m ${Offline_Package_Path}/oralibs.tar.gz file not found\033[0m"
+    exit
+  fi
 }
 
-#install package
+#install package TODO
 function install_package() {
+  if [[ ${Install_Package_Mode} == 'online' || ${Install_Package_Mode} == '' ]]; then
+    install_package_online
+  elif [[ ${Install_Package_Mode} == 'offline' ]]; then
+    install_package_offline
+  else
+    # not install package
+    echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mSkip install package.\033[0m"
+    exit
+  fi
+}
+
+# install package online
+function install_package_online() {
   yum install -y binutils compat-libcap1 compat-libstdc++-33 compat-libstdc++-33.i686 glibc glibc.i686 \
   glibc-devel glibc-devel.i686 ksh libaio libaio.i686 libaio-devel libaio-devel.i686 libX11 libX11.i686 \
   libXau libXau.i686 libXi libXi.i686 libXtst libXtst.i686 libgcc libgcc.i686 libstdc++ libstdc++.i686 \
   libstdc++-devel libstdc++-devel.i686 libxcb libxcb.i686 make nfs-utils net-tools smartmontools sysstat \
   unixODBC unixODBC-devel gcc gcc-c++ libXext libXext.i686 zlib-devel zlib-devel.i686 unzip wget vim epel-release
+}
+
+# install package offline TODO
+function install_package_offline() {
+  if [[ ${Offline_Package_Path} != '' ]]; then
+    config_local_repo
+    tar -zvxf ${Offline_Package_Path}/oralibs.tar.gz -C ${BASE_PATH}
+    yum -y localinstall ${Offline_Package_Path}/oralibs/*.rpm --nogpgcheck
+    echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mInstall package offline successfully.\033[0m"
+  else
+    echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mSkip install package offline.\033[0m"
+  fi
+}
+
+# config local repo TODO
+function config_local_repo() {
+  echo "[local]" > /etc/yum.repos.d/local.repo
+  echo "name=local" >> /etc/yum.repos.d/local.repo
+  echo "enable=1" >> /etc/yum.repos.d/local.repo
+  echo "baseurl=file:///${Offline_Package_Path}/oralibs" >> /etc/yum.repos.d/local.repo
+  echo "gpgcheck=0" >> /etc/yum.repos.d/local.repo
+
+  yum clean all
+  yum makecache
 }
 
 #base_config
@@ -359,13 +406,53 @@ function oracle_instance() {
   fi
 }
 
+# config oracle start up at boot TODO
+function config_startup_at_boot() {
+  ORATAB_FILE="/etc/oratab"
+  if [[ ${Startup_At_Boot} == 'Y' ]]; then
+    sed -i "s/:N/:Y/g" ${ORATAB_FILE}
+    echo -e "\033[34mConfig startup at boot >>\033[0m \033[32mConfig startup at boot successfully.\033[0m"
+  else
+    echo -e "\033[34mConfig startup at boot >>\033[0m \033[32mSkip config startup at boot.\033[0m"
+  fi
+}
+
+# config oracle service TODO
+function config_oracle_service() {
+  ORACLE_SERVICE_FILE= "/usr/lib/systemd/system/oracle.service"
+  if [[ ${Config_Oracle_Service} == 'Y' ]]; then
+    touch ${ORACLE_SERVICE_FILE}
+    echo -e
+      '\[Unit]
+      \Description=Oracle Database 12c Startup/Shutdown Service
+      \After=syslog.target network.target
+      \
+      \[Service]
+      \LimitMEMLOCK=infinity
+      \LimitNOFILE=65535
+      \Type=oneshot
+      \RemainAfterExit=yes
+      \User=oracle
+      \Environment="ORACLE_HOME='${ORACLE_HOME}'
+      \ExecStart='${ORACLE_HOME}'/bin/dbstart $ORACLE_HOME >> 2>&1 &
+      \ExecStop='${ORACLE_HOME}'/bin/dbshut $ORACLE_HOME 2>&1 &
+      \
+      \[Install]
+      \WantedBy=multi-user.target' > ${ORACLE_SERVICE_FILE}
+  else
+    echo -e "\033[34mConfig oracle service >>\033[0m \033[32mSkip config oracle service.\033[0m"
+  fi
+}
+
 function main() {
   j_para && \
   install_package && \
   base_config && \
   oracle_file && \
   install_oracle && \
-  oracle_instance
+  oracle_instance && \
+  config_startup_at_boot && \
+  config_oracle_service
 }
 
 #run script
