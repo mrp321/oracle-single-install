@@ -149,8 +149,8 @@ function install_package_online() {
 function install_package_offline() {
   if [[ ${Offline_Package_Path} != '' ]]; then
     config_local_repo
-    tar -zvxf ${Offline_Package_Path}/oralibs.tar.gz -C ${BASE_PATH}
-    yum -y localinstall ${Offline_Package_Path}/oralibs/*.rpm --nogpgcheck
+    tar -zvxf ${Offline_Package_Path}/oralibs.tar.gz -C ${Offline_Package_Path}
+    rpm -ivh --force --nodeps /tmp/oralibs/*.rpm
     echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mInstall package offline successfully.\033[0m"
   else
     echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mSkip install package offline.\033[0m"
