@@ -4,13 +4,13 @@
 #local host ip
 #address: https://github.com/spdir/oracle-single-install
 # 国内仓库地址: https://gitee.com/spdir/oracle-single-install
-HostIP=""
+HostIP="192.168.229.138"
 #oracle user password
 OracleUserPasswd="oracle.com"
 #default `systemOracle.com`
 ORACLE_DB_PASSWD=""
 #SID/SERVERNAME,default `oriedb`
-SID=""
+SID="orcl"
 # Install single instance choose charset
 # 1-AL32UTF8(default), 2-ZHS16GBK
 # Currently only supports single instance, does not support pdb
@@ -20,7 +20,7 @@ SINGLE_CHARSET='1'
 IS_INSTANCE='1'
 # Choose configure file path
 # 0-remote(default)  1-local
-Get_Config_Method="0"
+Get_Config_Method="1"
 #---------------------------------------------------------------------------------#
 #Global environment variable
 if [[ ${SID} == "" ]];then
@@ -253,17 +253,17 @@ function install_oracle() {
     cat /tmp/oracle.out  | grep sh
     if [[ $? == 0 ]];then
       `cat /tmp/oracle.out  | grep sh | awk -F ' ' '{print $2}' | head -1`
-	  if [[ $? == 0 ]]; then
+      if [[ $? == 0 ]]; then
         echo -e "\033[34mInstallNotice >>\033[0m \033[32mScript 1 run ok\033[0m"
-	  else
-	    echo -e "\033[34mInstallNotice >>\033[0m \033[31mScript 1 run faild\033[0m"
-	  fi
+      else
+        echo -e "\033[34mInstallNotice >>\033[0m \033[31mScript 1 run faild\033[0m"
+      fi
       `cat /tmp/oracle.out  | grep sh | awk -F ' ' '{print $2}' | tail -1`
-	  if [[ $? == 0 ]];then
+      if [[ $? == 0 ]];then
         echo -e "\033[34mInstallNotice >>\033[0m \033[32mScript 2 run ok\033[0m"
-	  else
-	    echo -e "\033[34mInstallNotice >>\033[0m \033[31mScript 2 run faild\033[0m"
-	  fi
+      else
+        echo -e "\033[34mInstallNotice >>\033[0m \033[31mScript 2 run faild\033[0m"
+      fi
       #start listen
       echo -e "\033[34mInstallNotice >>\033[0m \033[32mOracle start listen \033[05m...\033[0m"
       su - oracle -c "netca /silent /responsefile ${response}/netca.rsp"
@@ -308,7 +308,7 @@ function cdb_pdb() {
   else
       wget https://raw.githubusercontent.com/spdir/oracle-single-install/master/conf/initcdb.ora -O ${INIT_CDB_FILE}
   fi
-  
+
   if [[ ${SID} != 'oriedb' ]];then
     sed -i "s/oriedb/${SID}/g" ${INIT_CDB_FILE}
   fi
@@ -361,7 +361,7 @@ function oracle_instance() {
 
 function main() {
   j_para && \
-  install_package && \
+#  install_package && \
   base_config && \
   oracle_file && \
   install_oracle && \
