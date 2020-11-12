@@ -4,13 +4,13 @@
 #local host ip
 #address: https://github.com/spdir/oracle-single-install
 # 国内仓库地址: https://gitee.com/spdir/oracle-single-install
-HostIP=`ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}'`
+HostIP=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}')
 #oracle user password
 OracleUserPasswd="oracle.com"
 #default `systemOracle.com`
 ORACLE_DB_PASSWD=""
 #SID/SERVERNAME,default `oriedb`
-SID=""
+SID="orcl"
 # Install single instance choose charset
 # 1-AL32UTF8(default), 2-ZHS16GBK
 # Currently only supports single instance, does not support pdb
@@ -20,13 +20,19 @@ SINGLE_CHARSET='1'
 IS_INSTANCE='1'
 # Choose configure file path
 # 0-remote(default)  1-local
-Get_Config_Method="0"
+Get_Config_Method="1"
 # install package online or offline
 # online-online,offline-offline,default online
 Install_Package_Mode="offline"
 # offline package path where you install packages from
 # when the value of "Install_Package_Mode" is offline, the config can't be empty
 Offline_Package_Path="/tmp"
+
+Startup_At_Boot="Y"
+
+Config_Oracle_Service="Y"
+
+
 #---------------------------------------------------------------------------------#
 #Global environment variable
 if [[ ${SID} == "" ]];then
@@ -342,7 +348,9 @@ function single_instance() {
     echo -e "\033[34mInstallNotice >>\033[0m \033[31mOracle install successful,but instances init faild\033[0m"
   fi
   rm -rf /tmp/oracle.out1
-  exit
+  if [[ $? != 0 ]];then
+    exit
+  fi
 }
 
 #install oracle cdb instance
@@ -419,40 +427,90 @@ function config_startup_at_boot() {
 
 # config oracle service TODO
 function config_oracle_service() {
-  ORACLE_SERVICE_FILE= "/usr/lib/systemd/system/oracle.service"
   if [[ ${Config_Oracle_Service} == 'Y' ]]; then
+    ORACLE_SERVICE_FILE="/usr/lib/systemd/system/oracle.service"
     touch ${ORACLE_SERVICE_FILE}
-    echo -e
-      '\[Unit]
-      \Description=Oracle Database 12c Startup/Shutdown Service
-      \After=syslog.target network.target
-      \
-      \[Service]
-      \LimitMEMLOCK=infinity
-      \LimitNOFILE=65535
-      \Type=oneshot
-      \RemainAfterExit=yes
-      \User=oracle
-      \Environment="ORACLE_HOME='${ORACLE_HOME}'
-      \ExecStart='${ORACLE_HOME}'/bin/dbstart $ORACLE_HOME >> 2>&1 &
-      \ExecStop='${ORACLE_HOME}'/bin/dbshut $ORACLE_HOME 2>&1 &
-      \
-      \[Install]
-      \WantedBy=multi-user.target' > ${ORACLE_SERVICE_FILE}
+    echo "[Unit]" > ${ORACLE_SERVICE_FILE}
+    echo "Description=Oracle Database 12c Startup/Shutdown Service" >> ${ORACLE_SERVICE_FILE}
+    echo "After=syslog.target network.target" >> ${ORACLE_SERVICE_FILE}
+    echo "[Service]" >> ${ORACLE_SERVICE_FILE}
+    echo "LimitMEMLOCK=infinity" >> ${ORACLE_SERVICE_FILE}
+    echo "LimitNOFILE=65535" >> ${ORACLE_SERVICE_FILE}
+    echo "Type=oneshot" >> ${ORACLE_SERVICE_FILE}
+    echo "RemainAfterExit=yes" >> ${ORACLE_SERVICE_FILE}
+    echo "User=oracle" >> ${ORACLE_SERVICE_FILE}
+    echo "Environment=\"ORACLE_HOME=${ORACLE_HOME}\"" >> ${ORACLE_SERVICE_FILE}
+    echo "ExecStart=${ORACLE_HOME}/bin/dbstart $ORACLE_HOME >> 2>&1 &" >> ${ORACLE_SERVICE_FILE}
+    echo "ExecStop=${ORACLE_HOME}/bin/dbshut $ORACLE_HOME 2>&1 &" >> ${ORACLE_SERVICE_FILE}
+    echo "[Install]" >> ${ORACLE_SERVICE_FILE}
+    echo "WantedBy=multi-user.target" >> ${ORACLE_SERVICE_FILE}
+
+    systemctl enable oracle.service
   else
     echo -e "\033[34mConfig oracle service >>\033[0m \033[32mSkip config oracle service.\033[0m"
   fi
 }
 
+# create databases
+function create_dbs() {
+    echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m Starting creating databases .\033[0m"
+    DBS_FILE="${root_path}/conf/dbs.txt"
+    DATADP_PATH="/data/app/datadp"
+    if [ ! -d ${DATADP_PATH} ];then
+      mkdir -p ${DATADP_PATH}
+    fi
+    db_sql="sqlplus / as sysdba"
+    db_sql="${db_sql}\ncreate or replace directory datadp_dir as '/data/app/datadp';"
+
+    temp_sql=""
+    cat ${DBS_FILE} | while read line
+    do
+      param_array=(${line//:/ })
+      username=${param_array[0]}
+      password=${param_array[1]}
+      tablespace=${param_array[2]}
+      echo "current username is ${username}"
+      echo "current password is ${password}"
+      echo "current tablespace is ${tablespace}"
+#      db_sql="${db_sql}
+#      create tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
+#      create temporary tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}_TEMP.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
+#      create user ${username} identified by ${password} default tablespace ${tablespace} temporary tablespace ${tablespace}_TEMP;
+#      grant read,write on directory datadp_dir to ${username};
+#      grant dba,resource,unlimited tablespace to ${username};"
+      temp_sql="create tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
+      create temporary tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}_TEMP.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
+      create user ${username} identified by ${password} default tablespace ${tablespace} temporary tablespace ${tablespace}_TEMP;
+      grant read,write on directory datadp_dir to ${username};
+      grant dba,resource,unlimited tablespace to ${username};"
+
+      db_sql="${db_sql}${temp_sql}"
+#      echo -e "\ntemp_sql is "${temp_sql}
+#      echo -e "\ndb_sql is "${db_sql}
+
+    done
+    db_sql="${db_sql}exit <<EOF"
+
+#    echo -e "db sql is : ${db_sql}"
+    su - oracle -c "${db_sql}"
+    echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m Finishing creating databases .\033[0m"
+}
+
 function main() {
-  j_para && \
-  install_package && \
-  base_config && \
-  oracle_file && \
-  install_oracle && \
-  oracle_instance && \
-  config_startup_at_boot && \
-  config_oracle_service
+  su - oracle -c "lsnrctl status | grep -q 'READY'"
+  if [ $? -ne 0 ]; then
+    j_para && \
+    install_package && \
+    base_config && \
+    oracle_file && \
+    install_oracle && \
+    oracle_instance
+  else
+    config_startup_at_boot && \
+    config_oracle_service && \
+    create_dbs
+  fi
+  exit
 }
 
 #run script
