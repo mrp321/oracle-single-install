@@ -4,32 +4,44 @@
 #local host ip
 #address: https://github.com/spdir/oracle-single-install
 # 国内仓库地址: https://gitee.com/spdir/oracle-single-install
+# IP地址, 这里通过命令来读取, 但是不适用多网卡情况
 HostIP=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}')
 #oracle user password
 OracleUserPasswd="oracle.com"
 #default `systemOracle.com`
+# sys用户密码
 ORACLE_DB_PASSWD=""
 #SID/SERVERNAME,default `oriedb`
+# oracle 实例名称
 SID="orcl"
 # Install single instance choose charset
 # 1-AL32UTF8(default), 2-ZHS16GBK
 # Currently only supports single instance, does not support pdb
+# 字符集
 SINGLE_CHARSET='1'
 # Install instance
 #0-no,1-singleInstance,2-cdb
+# oracle实例类型
 IS_INSTANCE='1'
 # Choose configure file path
 # 0-remote(default)  1-local
+# 配置文件来源
 Get_Config_Method="1"
 # install package online or offline
 # online-online,offline-offline,default online
+# 安装依赖包类型
 Install_Package_Mode="offline"
 # offline package path where you install packages from
 # when the value of "Install_Package_Mode" is offline, the config can't be empty
+# 离线依赖包路径
 Offline_Package_Path="/tmp"
-
+# start at boot whether or not
+# 是否开机自启
+# Y:是
 Startup_At_Boot="Y"
-
+# config oracle service whether or not
+# 是否创建oracle服务
+# Y: 是
 Config_Oracle_Service="Y"
 
 
@@ -94,6 +106,7 @@ EOF
 "
 
 #Judgment parameter
+# 参数校验
 function j_para() {
   #判断必要参数是否存在
   if [[ ${HostIP} == '' ]];then
@@ -105,6 +118,7 @@ function j_para() {
     echo -e "\033[34mInstallNotice >>\033[0m \033[31mlinuxx64_12201_database.zip not found\033[0m"
     exit
   fi
+  # 判断oracle配置文件是否存在
   if [[ ${Get_Config_Method} == "1" ]]; then
     if [[ ${IS_INSTANCE} == '1' ]]; then
       if [[ ! -f ${root_path}/conf/db_install.rsp || ! -f ${root_path}/conf/dbca_single.rsp ]]; then
@@ -123,6 +137,7 @@ function j_para() {
       fi
     fi
   fi
+  # 判断依赖包安装形式
   if [[ ${Install_Package_Mode} == 'offline' && ! -f ${Offline_Package_Path}/oralibs.tar.gz ]]; then
     echo -e "\033[34mInstallNotice >>\033[0m \033[31m ${Offline_Package_Path}/oralibs.tar.gz file not found\033[0m"
     exit
@@ -130,12 +145,16 @@ function j_para() {
 }
 
 #install package TODO
+# 安装依赖包
 function install_package() {
   if [[ ${Install_Package_Mode} == 'online' || ${Install_Package_Mode} == '' ]]; then
+    # 在线安装
     install_package_online
   elif [[ ${Install_Package_Mode} == 'offline' ]]; then
+    # 离线安装
     install_package_offline
   else
+    # 不安装
     # not install package
     echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mSkip install package.\033[0m"
     exit
@@ -143,6 +162,7 @@ function install_package() {
 }
 
 # install package online
+# 在线安装依赖包
 function install_package_online() {
   yum install -y binutils compat-libcap1 compat-libstdc++-33 compat-libstdc++-33.i686 glibc glibc.i686 \
   glibc-devel glibc-devel.i686 ksh libaio libaio.i686 libaio-devel libaio-devel.i686 libX11 libX11.i686 \
@@ -152,30 +172,38 @@ function install_package_online() {
 }
 
 # install package offline TODO
+# 离线安装依赖包
 function install_package_offline() {
   if [[ ${Offline_Package_Path} != '' ]]; then
+    # 配置本地yum源
     config_local_repo
+    # 解压离线安装依赖包
     tar -zvxf ${Offline_Package_Path}/oralibs.tar.gz -C ${Offline_Package_Path}
+    # 安装离线依赖包
     rpm -ivh --force --nodeps /tmp/oralibs/*.rpm
     echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mInstall package offline successfully.\033[0m"
   else
+    # 跳过安装
     echo -e "\033[34mInstall Package Offline >>\033[0m \033[32mSkip install package offline.\033[0m"
   fi
 }
 
 # config local repo TODO
+# 创建本地yum源
 function config_local_repo() {
   echo "[local]" > /etc/yum.repos.d/local.repo
   echo "name=local" >> /etc/yum.repos.d/local.repo
   echo "enable=1" >> /etc/yum.repos.d/local.repo
   echo "baseurl=file:///${Offline_Package_Path}/oralibs" >> /etc/yum.repos.d/local.repo
   echo "gpgcheck=0" >> /etc/yum.repos.d/local.repo
-
+  # 清空yum缓存
   yum clean all
+  # 创建yum缓存
   yum makecache
 }
 
 #base_config
+# 基础配置
 function base_config() {
   echo "${HostIP}  DB" >> /etc/hosts
   #close selinux
@@ -250,6 +278,7 @@ function base_config() {
 }
 
 #option oracle file
+# oracle配置文件处理
 function oracle_file() {
   #Decompression package
   unzip /tmp/linuxx64_12201_database.zip -d /tmp
@@ -290,6 +319,7 @@ function oracle_file() {
 }
 
 #start install oracle software and start listen
+# 安装oracle
 function install_oracle() {
   #start install oracle
   oracle_out='/tmp/oracle.out'
@@ -333,6 +363,7 @@ function install_oracle() {
 }
 
 #install oracle single instance
+# 安装oracle单实例
 function single_instance() {
   echo -e "\033[34mInstallNotice >>\033[0m \033[32mStart install single instance \033[05m...\033[0m"
   #此安装过程会输入三次密码，超级管理员，管理员，库(这些密码也可以在配置文件中写)
@@ -354,6 +385,7 @@ function single_instance() {
 }
 
 #install oracle cdb instance
+# 安装oracle cdb实例
 function cdb_pdb() {
   echo -e "\033[34mInstallNotice >>\033[0m \033[32mStart install CDB \033[05m...\033[0m"
   INIT_CDB_FILE="/data/app/oracle/product/12.2.0/db_1/dbs/initcdb.ora"
@@ -402,6 +434,7 @@ function cdb_pdb() {
 }
 
 #install oracle instance
+# 安装oracle实例
 function oracle_instance() {
   #安装Oracle实例
   if [[ ${IS_INSTANCE} == '1' ]]; then  #install single instance
@@ -415,6 +448,7 @@ function oracle_instance() {
 }
 
 # config oracle start up at boot TODO
+# 配置开机自启
 function config_startup_at_boot() {
   ORATAB_FILE="/etc/oratab"
   if [[ ${Startup_At_Boot} == 'Y' ]]; then
@@ -426,6 +460,7 @@ function config_startup_at_boot() {
 }
 
 # config oracle service TODO
+# 配置oracle服务以及开机启动
 function config_oracle_service() {
   if [[ ${Config_Oracle_Service} == 'Y' ]]; then
     ORACLE_SERVICE_FILE="/usr/lib/systemd/system/oracle.service"
@@ -452,62 +487,80 @@ function config_oracle_service() {
 }
 
 # create databases
+# 创建oracle用户, 表空间
 function create_dbs() {
     echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m Starting creating databases .\033[0m"
+    # 创建数据泵文件存放路径
     DBS_FILE="${root_path}/conf/dbs.txt"
     DATADP_PATH="/data/app/datadp"
     if [ ! -d ${DATADP_PATH} ];then
       mkdir -p ${DATADP_PATH}
     fi
-    db_sql="sqlplus / as sysdba"
-    db_sql="${db_sql}\ncreate or replace directory datadp_dir as '/data/app/datadp';"
 
-    temp_sql=""
-    cat ${DBS_FILE} | while read line
+    echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m creating datadp directory.\033[0m"
+
+    # 创建数据泵存放路径sql
+    datadp_sql="sqlplus / as sysdba<<EOF
+create or replace directory datadp_dir as '${DATADP_PATH}';
+exit
+EOF"
+    # 执行sql
+    su - oracle -c "${datadp_sql}"
+
+    # 读取文件,遍历每一行
+    # [[ -n ${line} ]] 是为了防止读取不到文件最后一行的情况, 如果是在linux环境下修改此文件, 则不需要添加此行
+    cat ${DBS_FILE} | while read line || [[ -n ${line} ]]
     do
+      # 通过分隔符":"来分隔每一行
       param_array=(${line//:/ })
+      # 用户名
       username=${param_array[0]}
+      # 密码
       password=${param_array[1]}
+      # 表空间名
       tablespace=${param_array[2]}
-      echo "current username is ${username}"
-      echo "current password is ${password}"
-      echo "current tablespace is ${tablespace}"
-#      db_sql="${db_sql}
-#      create tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
-#      create temporary tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}_TEMP.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
-#      create user ${username} identified by ${password} default tablespace ${tablespace} temporary tablespace ${tablespace}_TEMP;
-#      grant read,write on directory datadp_dir to ${username};
-#      grant dba,resource,unlimited tablespace to ${username};"
-      temp_sql="create tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
-      create temporary tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}_TEMP.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
-      create user ${username} identified by ${password} default tablespace ${tablespace} temporary tablespace ${tablespace}_TEMP;
-      grant read,write on directory datadp_dir to ${username};
-      grant dba,resource,unlimited tablespace to ${username};"
+      echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m current username is : '${username}', password is : '${password}', tablespace is : '${tablespace}'.\033[0m"
 
-      db_sql="${db_sql}${temp_sql}"
-#      echo -e "\ntemp_sql is "${temp_sql}
-#      echo -e "\ndb_sql is "${db_sql}
+      # 表空间创建/临时表空间创建/用户创建/授权sql
+      db_sql="sqlplus / as sysdba<<EOF
+create tablespace ${tablespace} datafile '/data/app/oracle/oradata/orcl/${tablespace}.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
+create temporary tablespace ${tablespace}_TEMP tempfile '/data/app/oracle/oradata/orcl/${tablespace}_TEMP.dbf' size 2048M AUTOEXTEND ON NEXT 200M;
+create user ${username} identified by ${password} default tablespace ${tablespace} temporary tablespace ${tablespace}_TEMP;
+grant read,write on directory datadp_dir to ${username};
+grant dba,resource,unlimited tablespace to ${username};
+exit
+EOF"
+      echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m now start executing sql : '${db_sql}'.\033[0m"
 
+      # 执行sql
+      su - oracle -c "${db_sql}"
     done
-    db_sql="${db_sql}exit <<EOF"
-
-#    echo -e "db sql is : ${db_sql}"
-    su - oracle -c "${db_sql}"
     echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m Finishing creating databases .\033[0m"
 }
 
 function main() {
+  # 判断是否已经开启监听
+  # 如果已经开启监听, 且监听状态为READY, 则认为oracle已经安装成功, 跳过oracle的安装过程
   su - oracle -c "lsnrctl status | grep -q 'READY'"
   if [ $? -ne 0 ]; then
+    # 参数校验
     j_para && \
+    # 安装依赖包
     install_package && \
+    # 参数配置
     base_config && \
+    # oracle配置文件处理
     oracle_file && \
+    # 安装oracle
     install_oracle && \
+    # 创建oracle实例
     oracle_instance
   else
+    # 配置开机自启
     config_startup_at_boot && \
+    # 配置oracle服务
     config_oracle_service && \
+    # 创建用户, 表空间
     create_dbs
   fi
   exit
