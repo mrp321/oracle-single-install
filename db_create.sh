@@ -1,6 +1,10 @@
+#!/bin/bash
+
+# 注意:需要通过`./xx.sh`方式执行脚本, 不能通过`sh xx.sh`方式执行脚本. 否则,脚本中执行`source xxx`时会报错
+source common_param_config.sh
+
 # create databases
 function create_dbs() {
-    root_path=`pwd`
     echo -e "\033[34mCreating oracle databases >>\033[0m \033[32m Starting creating databases .\033[0m"
     DBS_FILE="${root_path}/conf/dbs.txt"
     DATADP_PATH="/data/app/datadp"
