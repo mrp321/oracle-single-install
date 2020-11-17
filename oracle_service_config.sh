@@ -7,7 +7,20 @@ source common_param_config.sh
 # 配置开机自启
 function config_startup_at_boot() {
   ORATAB_FILE="/etc/oratab"
+  echo -e "\033[34mConfig startup at boot >>\033[0m \033[32mBegin config startup at boot, current oracle home is '${ORACLE_HOME}'.\033[0m"
   if [[ ${Startup_At_Boot} == 'Y' ]]; then
+    # 如果该文件内容为空
+    if [ ! -s ${ORATAB_FILE} ]; then
+      echo -e "\033[34mConfig startup at boot >>\033[0m \033[32m${ORATAB_FILE} file is empty.\033[0m"
+      # 解决linux中oracle的/etc/oratab文件的缺失导致数据库启动失败
+      sh ${ORACLE_HOME}/root.sh
+    fi
+    # 判断该文件中是否有启动配置
+    oratab_config=`cat ${ORATAB_FILE} | grep "${SID}:${ORACLE_HOME}:"`
+    if [[ ${oratab_config} == '' ]]; then
+      # 没有则写入默认配置
+      echo "${SID}:${ORACLE_HOME}:N" > ${ORATAB_FILE}
+    fi
     sed -i "s/:N/:Y/g" ${ORATAB_FILE}
     echo -e "\033[34mConfig startup at boot >>\033[0m \033[32mConfig startup at boot successfully.\033[0m"
   else

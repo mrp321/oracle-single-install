@@ -15,4 +15,6 @@ if [ $? -ne 0 ]; then
 else
   # oracle服务安装与自启
   source oracle_service_config.sh
+  # 创建用户和表空间
+  source user_tablespace_create.sh
 fi
