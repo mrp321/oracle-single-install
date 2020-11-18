@@ -147,7 +147,8 @@ ISMPDATA:ISMPDATA:ISMPDATA_DATA
 
 ```
 |   common_param_config.sh => 公共参数配置脚本
-|   db_create.sh => 用户名, 表空间创建脚本
+|   user_tablespace_create.sh => 用户名, 表空间创建脚本
+|   user_tablespace_drop.sh => 用户名, 表空间删除脚本
 |   oracle_config_install.sh => oracle配置与安装脚本
 |   oracle_install_each_step.sh => oracle安装多脚本组合
 |   oracle_service_config.sh => oracle服务及自启配置脚本
