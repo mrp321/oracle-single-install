@@ -16,6 +16,7 @@
 \---conf => oracle配置文件
         dbca_single.rsp
         dbs.txt => 用户名, 表空间创建配置文件
+        dbs_drop.txt => 用户名, 表空间删除配置文件
         db_install.rsp
         initcdb.ora
 ```
@@ -103,10 +104,13 @@ ISMPDATA:ISMPDATA:ISMPDATA_DATA
 ```
 # 去除脚本中可能存在的\r字符
 [root@localhost ~]# sed -i 's/\r//' oracle_install.sh
+[root@localhost ~]# sed -i 's/\r//' *.sh
 # 去除配置文件中可能存在的\r字符
 [root@localhost ~]# sed -i 's/\r//' conf/dbs.txt
+[root@localhost ~]# sed -i 's/\r//' conf/*.txt
 # 授权
 [root@localhost ~]# chmod 777 -R conf/ oracle_install.sh 
+[root@localhost ~]# chmod 777 -R conf/ *.sh
 ```
 
 ### 3.3.2. 执行安装脚本
