@@ -1,0 +1,13 @@
+Export_Data_Type=expdp
+Export_Data_Dir=datadp_dir
+Export_Data_File=expdp.dmp
+Export_Data_Log=expdp.log
+Full=y
+Tables=
+Username=ISMPDATA
+Password=ISMPDATA
+Sid=orcl
+Schemas=ISMPDATA
+Tablespaces=ISMPDATA_DATA
+Owner=ISMPDATA
+Query=where 1 = 1

@@ -1,0 +1,15 @@
+Import_Data_Type=impdp
+Import_Data_Dir=datadp_dir
+Import_Data_File=impdp.dump
+Import_Data_Log=impdp.log
+Full=y
+Tables=
+Ignore=y
+Username=ISMPDATA
+Password=ISMPDATA
+Sid=orcl
+Schemas=ISMPDATA
+Tablespaces=ISMPDATA_DATA
+Owner=ISMPDATA
+Remap_Schema=ISMPDATA
+Table_Exists_Action=y

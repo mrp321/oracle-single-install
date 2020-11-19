@@ -1,0 +1,15 @@
+Import_Data_Type=imp
+Import_Data_Dir=/home/oracle
+Import_Data_File=imp.dump
+Import_Data_Log=imp.log
+Full=y
+Tables=tb1,tb2
+Ignore=y
+Username=ISMPDATA
+Password=ISMPDATA
+Sid=orcl
+Schemas=ISMPDATA
+Tablespaces=ISMPDATA_DATA
+Owner=ISMPDATA
+Remap_Schema=ISMPDATA
+Table_Exists_Action=y
