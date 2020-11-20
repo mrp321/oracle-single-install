@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# 注意:需要通过`./xx.sh`方式执行脚本, 不能通过`sh xx.sh`方式执行脚本. 否则,脚本中执行`source xxx`时会报错
-source common_param_config.sh
+root_path=`pwd`
 
 # TODO 待完善
 
@@ -39,9 +38,9 @@ Table_Exists_Action="y"
 Import_sql=""
 
 function importByType() {
-  echo -n "please enter import type: "
-  read Import_Data_Type
-  echo "hello, current import type is: ${Import_Data_Type}"
+  echo -n -e "\033[34mImportData >>\033[0m \033[31mPlease enter import type: \033[0m"
+  read -r Import_Data_Type
+  echo -e "\033[34mImportData >>\033[0m \033[31mHello, current import type is: ${Import_Data_Type}: \033[0m"
   echo -e "\033[34mImportData >>\033[0m \033[31mStarting importing data.\033[0m"
   # 判断导入的数据的方式
   if [[ ${Import_Data_Type} == "impdp" ]]; then
@@ -115,8 +114,8 @@ function imp() {
 }
 
 function parseConfig() {
-#  # 导出数据方式
-#  Import_Data_Type=$(cat ${Config_File} | grep Import_Data_Type | cut -d'=' -f2)
+  #  # 导出数据方式
+  #  Import_Data_Type=$(cat ${Config_File} | grep Import_Data_Type | cut -d'=' -f2)
   Import_Data_Dir=$(cat ${Config_File} | grep Import_Data_Dir | cut -d'=' -f2)
   Import_Data_File=$(cat ${Config_File} | grep Import_Data_File | cut -d'=' -f2)
   Import_Data_Log=$(cat ${Config_File} | grep Import_Data_Log | cut -d'=' -f2)
@@ -131,8 +130,11 @@ function parseConfig() {
   Owner=$(cat ${Config_File} | grep Owner | cut -d'=' -f2)
   Remap_Schema=$(cat ${Config_File} | grep Remap_Schema | cut -d'=' -f2)
   Table_Exists_Action=$(cat ${Config_File} | grep Table_Exists_Action | cut -d'=' -f2)
-  if [[ ${Tables} != "" && ${Schemas} != "" ]]; then
-    echo -e "\033[34mImportData >>\033[0m \033[31mTables and Schemas can't exist at the same time.\033[0m"
+  # tables 和 schemas 和 tablespaces 以及 full 不能同时配置, 否则会报错
+  if [[ ${Full} == "y" && "${Tables}${Schemas}${Tablespaces}" == "" ]] || [[ "${Tables}${Schemas}${Tablespaces}" == "${Tables}" || "${Tables}${Schemas}${Tablespaces}" == "${Schemas}" || "${Tables}${Schemas}${Tablespaces}" == "${Tablespaces}" && ${Full} != "y" ]]; then
+    echo -e "\033[34mImportData >>\033[0m \033[31m'Tables' or 'Schemas' or 'Tablespaces' or 'Full' check ok.\033[0m"
+  else
+    echo -e "\033[34mImportData >>\033[0m \033[31m'Tables' or 'Schemas' or 'Tablespaces' or 'Full' can't exist at the same time, PLEASE check your configuration.\033[0m"
     exit
   fi
 }

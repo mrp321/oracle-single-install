@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# 注意:需要通过`./xx.sh`方式执行脚本, 不能通过`sh xx.sh`方式执行脚本. 否则,脚本中执行`source xxx`时会报错
-source common_param_config.sh
+root_path=`pwd`
 
 # TODO 待完善
 
@@ -35,9 +34,9 @@ Query=""
 Export_sql=""
 
 function exportByType() {
-  echo -n "please enter export type: "
-  read Export_Data_Type
-  echo "hello, current export type is: ${Export_Data_Type}"
+  echo -n -e "\033[34mExportData >>\033[0m \033[31mPlease enter export type: \033[0m"
+  read -r Export_Data_Type
+  echo -e "\033[34mExportData >>\033[0m \033[31mHello, current export type is: ${Export_Data_Type}: \033[0m"
   echo -e "\033[34mExportData >>\033[0m \033[31mStarting exporting data.\033[0m"
   # 判断导出的数据的方式
   if [[ ${Export_Data_Type} == "expdp" ]]; then
@@ -109,8 +108,8 @@ function exp() {
 }
 
 function parseConfig() {
-#  # 导出数据方式
-#  Export_Data_Type=$(cat ${Config_File} | grep Export_Data_Type | cut -d'=' -f2)
+  #  # 导出数据方式
+  #  Export_Data_Type=$(cat ${Config_File} | grep Export_Data_Type | cut -d'=' -f2)
   # 导出数据目录
   Export_Data_Dir=$(cat ${Config_File} | grep Export_Data_Dir | cut -d'=' -f2)
   # 导出数据文件名
@@ -135,8 +134,11 @@ function parseConfig() {
   Owner=$(cat ${Config_File} | grep Owner | cut -d'=' -f2)
   # 查询条件
   Query=$(cat ${Config_File} | grep Query | cut -d'=' -f2)
-  if [[ ${Tables} != "" && ${Schemas} != "" ]]; then
-    echo -e "\033[34mExportData >>\033[0m \033[31mTables and Schemas can't exist at the same time.\033[0m"
+  # tables 和 schemas 和 tablespaces 以及 full 不能同时配置, 否则会报错
+  if [[ ${Full} == "y" && "${Tables}${Schemas}${Tablespaces}" == "" ]] || [[ "${Tables}${Schemas}${Tablespaces}" == "${Tables}" || "${Tables}${Schemas}${Tablespaces}" == "${Schemas}" || "${Tables}${Schemas}${Tablespaces}" == "${Tablespaces}" && ${Full} != "y" ]]; then
+    echo -e "\033[34mExportData >>\033[0m \033[31m'Tables' or 'Schemas' or 'Tablespaces' or 'Full' check ok.\033[0m"
+  else
+    echo -e "\033[34mExportData >>\033[0m \033[31m'Tables' or 'Schemas' or 'Tablespaces' or 'Full' can't exist at the same time, PLEASE check your configuration.\033[0m"
     exit
   fi
 }

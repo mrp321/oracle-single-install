@@ -1,0 +1,16 @@
+Operate_Data_Type=expdp
+Operate_Data_Dir=datadp_dir
+Operate_Data_File=operate.dump
+Operate_Data_Log=operate.log
+Full=y
+Tables=
+Username=ISMPDATA
+Password=ISMPDATA
+Sid=orcl
+Schemas=ISMPDATA
+Tablespaces=
+Owner=ISMPDATA
+Query=\"where id > -1"
+Ignore=y
+Remap_Schema=ISMPDATA
+Table_Exists_Action=y

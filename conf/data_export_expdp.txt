@@ -10,4 +10,4 @@ Sid=orcl
 Schemas=ISMPDATA
 Tablespaces=ISMPDATA_DATA
 Owner=ISMPDATA
-Query=where 1 = 1
+Query=\"where 1 = 1\"
